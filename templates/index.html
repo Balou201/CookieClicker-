@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cookie Clicker Multijoueur</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.js"></script>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            text-align: center;
+            background-color: #f0f8ff;
+            color: #333;
+            margin-top: 50px;
+        }
+        h1 {
+            color: #4CAF50;
+        }
+        #cookie {
+            font-size: 150px; /* Un gros cookie ! */
+            cursor: pointer;
+            user-select: none; /* Empêche la sélection du texte en cliquant */
+            transition: transform 0.1s ease-out; /* Petite animation au clic */
+            display: inline-block; /* Pour l'animation */
+        }
+        #cookie:active {
+            transform: scale(0.95); /* Le cookie rétrécit un peu quand on clique */
+        }
+        #scores {
+            margin-top: 30px;
+            padding: 20px;
+            background-color: #e6f7ff;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            max-width: 400px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .player-score {
+            font-size: 20px;
+            margin: 10px 0;
+            font-weight: bold;
+            color: #007bff;
+        }
+        .player-score:nth-child(odd) {
+            color: #ff6347; /* Couleur différente pour l'alternance des joueurs */
+        }
+    </style>
+</head>
+<body>
+    <h1>🍪 Cookie Clicker Multijoueur Local 🍪</h1>
+
+    <div id="cookie">🍪</div>
+
+    <div id="scores">
+        <h2>Scores des joueurs</h2>
+        <p>En attente des joueurs...</p>
+    </div>
+
+    <script>
+        // Initialise la connexion Socket.IO au serveur
+        var socket = io();
+
+        // Récupère l'élément du cookie
+        const cookieButton = document.getElementById('cookie');
+        // Récupère l'élément où les scores seront affichés
+        const scoresContainer = document.getElementById('scores');
+
+        // Ajoute un écouteur d'événements pour les clics sur le cookie
+        cookieButton.addEventListener('click', function() {
+            // Émet un événement 'click_event' au serveur
+            socket.emit('click_event');
+        });
+
+        // Gère l'événement 'update_score' reçu du serveur
+        // Cet événement est émis chaque fois qu'un joueur clique
+        socket.on('update_score', function(data) {
+            // La 'data' contient { player_id: '...', score: X }
+            console.log("Mise à jour du score reçue :", data);
+            updatePlayerScoreDisplay(data.player_id, data.score);
+        });
+
+        // Gère l'événement 'current_scores' reçu du serveur
+        // Cet événement est émis lors de la connexion/déconnexion d'un joueur ou au démarrage
+        socket.on('current_scores', function(allPlayersScores) {
+            console.log("Tous les scores reçus :", allPlayersScores);
+            scoresContainer.innerHTML = '<h2>Scores des joueurs</h2>'; // Nettoie l'affichage actuel
+
+            if (Object.keys(allPlayersScores).length === 0) {
+                scoresContainer.innerHTML += '<p>En attente des joueurs...</p>';
+            } else {
+                // Parcourt tous les scores et les affiche
+                for (const playerId in allPlayersScores) {
+                    if (allPlayersScores.hasOwnProperty(playerId)) {
+                        updatePlayerScoreDisplay(playerId, allPlayersScores[playerId]);
+                    }
+                }
+            }
+        });
+
+        /**
+         * Met à jour ou crée l'affichage du score d'un joueur spécifique.
+         * @param {string} playerId L'ID unique du joueur.
+         * @param {number} score Le score actuel du joueur.
+         */
+        function updatePlayerScoreDisplay(playerId, score) {
+            let playerScoreDiv = document.getElementById('player-' + playerId);
+
+            if (!playerScoreDiv) {
+                // Si l'élément n'existe pas, il faut le créer
+                playerScoreDiv = document.createElement('div');
+                playerScoreDiv.id = 'player-' + playerId;
+                playerScoreDiv.className = 'player-score';
+                scoresContainer.appendChild(playerScoreDiv);
+            }
+            // Affiche seulement une partie de l'ID pour le rendre plus lisible
+            const displayId = playerId.substring(0, 5);
+            playerScoreDiv.textContent = `Joueur ${displayId}: ${score} clics`;
+
+            // Réorganise les scores pour qu'ils soient triés par score (décroissant)
+            // C'est un peu plus avancé, mais ça rend l'affichage plus dynamique
+            const scoreElements = Array.from(scoresContainer.querySelectorAll('.player-score'));
+            scoreElements.sort((a, b) => {
+                const scoreA = parseInt(a.textContent.split(': ')[1]);
+                const scoreB = parseInt(b.textContent.split(': ')[1]);
+                return scoreB - scoreA; // Tri décroissant
+            });
+            scoreElements.forEach(el => scoresContainer.appendChild(el));
+        }
+    </script>
+</body>
+</html>
