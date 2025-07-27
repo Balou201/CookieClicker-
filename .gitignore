@@ -1,0 +1,10 @@
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+.Python
+venv/  # Ignore le dossier de votre environnement virtuel
+.env   # Ignore les fichiers d'environnement (si vous en utilisez pour des clés sensibles)
+
+# Flask specific
+instance/
